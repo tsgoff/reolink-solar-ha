@@ -1,0 +1,6 @@
+{
+  "name": "Reolink Solar Cloud",
+  "render_readme": true,
+  "domains": ["camera", "sensor", "button"],
+  "homeassistant": "2024.1.0"
+}

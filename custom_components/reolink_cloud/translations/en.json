@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Reolink Cloud Login",
+        "description": "Enter your Reolink Cloud credentials.\n\nThe TOTP Secret can be found in your authenticator app (1Password, etc.) - it's the long secret key, not the 6-digit code.",
+        "data": {
+          "username": "Email Address",
+          "password": "Password",
+          "totp_secret": "TOTP Secret (from 1Password)",
+          "storage_path": "Storage path for downloads"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Authentication failed. Please check username, password and TOTP secret.",
+      "unknown": "Unknown error occurred."
+    },
+    "abort": {
+      "already_configured": "This account is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "storage_path": "Storage path for downloads"
+        }
+      }
+    }
+  }
+}

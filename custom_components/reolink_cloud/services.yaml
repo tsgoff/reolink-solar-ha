@@ -1,0 +1,27 @@
+download_videos:
+  name: Download Videos
+  description: Download all videos for a specific date
+  fields:
+    date:
+      name: Date
+      description: The date to download videos for
+      required: true
+      selector:
+        date:
+    save_permanently:
+      name: Save Permanently
+      description: Save videos permanently in date-based folders
+      default: true
+      selector:
+        boolean:
+
+set_date:
+  name: Set Date Filter
+  description: Set the date filter for video display
+  fields:
+    date:
+      name: Date
+      description: The date to filter videos by
+      required: true
+      selector:
+        date:

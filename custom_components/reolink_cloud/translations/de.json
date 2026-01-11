@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Reolink Cloud Login",
+        "description": "Bitte gib deine Reolink Cloud Zugangsdaten ein.\n\nDas TOTP Secret findest du in deiner Authenticator App (1Password, etc.) - es ist der lange geheime Schlüssel, nicht der 6-stellige Code.",
+        "data": {
+          "username": "E-Mail Adresse",
+          "password": "Passwort",
+          "totp_secret": "TOTP Secret (aus 1Password)",
+          "storage_path": "Speicherpfad für Downloads"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Anmeldung fehlgeschlagen. Bitte überprüfe Benutzername, Passwort und TOTP Secret.",
+      "unknown": "Unbekannter Fehler aufgetreten."
+    },
+    "abort": {
+      "already_configured": "Dieser Account ist bereits konfiguriert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "storage_path": "Speicherpfad für Downloads"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "reolink_cloud",
+  "name": "Reolink Solar Cloud",
+  "codeowners": ["@tsgoff"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/tsgoff/reolink-solar-ha",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/tsgoff/reolink-solar-ha/issues",
+  "requirements": ["pyotp>=2.9.0"],
+  "version": "1.0.0"
+}
