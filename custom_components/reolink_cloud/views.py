@@ -175,13 +175,14 @@ class ReolinkCloudMediaView(HomeAssistantView):
         # Handle range requests for video streaming
         range_header = request.headers.get("Range")
         if range_header and mime_type.startswith("video/"):
-            return await self._handle_range_request(full_path, range_header, file_size, mime_type)
+            return await self._handle_range_request(request, full_path, range_header, file_size, mime_type)
 
         # Regular response
         return web.FileResponse(full_path, headers={"Content-Type": mime_type})
 
     async def _handle_range_request(
         self,
+        request: web.Request,
         full_path: str,
         range_header: str,
         file_size: int,

@@ -3,10 +3,10 @@
   "name": "Reolink Solar Cloud",
   "codeowners": ["@tsgoff"],
   "config_flow": true,
-  "dependencies": ["http", "media_source"],
+  "dependencies": ["http", "media_source", "frontend", "panel_custom"],
   "documentation": "https://github.com/tsgoff/reolink-solar-ha",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/tsgoff/reolink-solar-ha/issues",
   "requirements": [],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
