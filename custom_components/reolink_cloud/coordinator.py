@@ -70,17 +70,17 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             start_of_day = self._selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = self._selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
             
-            result = await self.api.async_get_videos(
+            # API returns list of items directly
+            videos = await self.api.async_get_videos(
                 start_date=start_of_day,
                 end_date=end_of_day,
-                page_size=100,
+                count=1000,
             )
             
-            videos = result.get("videos", [])
             self._videos_today = videos
             
             if videos:
-                # Get the most recent video
+                # Get the most recent video (first item, sorted by createdAt desc)
                 self._last_video = videos[0]
                 
                 # Download latest thumbnail

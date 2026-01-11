@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from aiohttp import ClientSession
@@ -43,6 +43,7 @@ class ReolinkCloudAPI:
                 "grant_type": "password",
                 "session_mode": "true",
                 "client_id": CLIENT_ID,
+                "mfa_trusted": "false",
             }
 
             headers = {
@@ -74,28 +75,35 @@ class ReolinkCloudAPI:
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         page: int = 1,
-        page_size: int = 50,
-    ) -> dict[str, Any]:
+        count: int = 100,
+    ) -> list[dict[str, Any]]:
         """Get videos from Reolink Cloud."""
         if not self.is_authenticated:
             if not await self.async_login():
-                return {"videos": [], "total": 0}
+                return []
 
         if start_date is None:
             start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         if end_date is None:
             end_date = datetime.now()
 
+        # API expects timestamps in milliseconds
+        start_at = int(start_date.timestamp() * 1000)
+        end_at = int(end_date.timestamp() * 1000)
+
         params = {
-            "startTime": int(start_date.timestamp() * 1000),
-            "endTime": int(end_date.timestamp() * 1000),
+            "start_at": start_at,
+            "end_at": end_at,
+            "data_type": "create_at",
             "page": page,
-            "pageSize": page_size,
+            "count": count,
         }
 
         headers = {
             "accept": "application/json",
             "authorization": f"Bearer {self._access_token}",
+            "origin": "https://cloud.reolink.com",
+            "referer": "https://cloud.reolink.com/",
         }
 
         try:
@@ -104,15 +112,16 @@ class ReolinkCloudAPI:
                     # Token expired, try to re-login
                     self._access_token = None
                     if await self.async_login():
-                        return await self.async_get_videos(start_date, end_date, page, page_size)
-                    return {"videos": [], "total": 0}
+                        return await self.async_get_videos(start_date, end_date, page, count)
+                    return []
 
                 result = await resp.json()
-                return result.get("data", {"videos": [], "total": 0})
+                # Response format: { items: [...] }
+                return result.get("items", [])
 
         except Exception as err:
             _LOGGER.error("Failed to get videos: %s", err)
-            return {"videos": [], "total": 0}
+            return []
 
     async def async_get_video_url(self, video_id: str) -> str | None:
         """Get download URL for a video."""
@@ -123,43 +132,44 @@ class ReolinkCloudAPI:
         headers = {
             "accept": "application/json",
             "authorization": f"Bearer {self._access_token}",
+            "origin": "https://cloud.reolink.com",
+            "referer": "https://cloud.reolink.com/",
         }
 
         try:
-            url = f"{API_VIDEOS_URL}{video_id}/url"
+            url = f"{API_VIDEOS_URL}{video_id}/url?type=download"
             async with self._session.get(url, headers=headers) as resp:
                 if resp.status == 200:
                     result = await resp.json()
-                    return result.get("data", {}).get("url")
+                    return result.get("url")
                 return None
 
         except Exception as err:
             _LOGGER.error("Failed to get video URL: %s", err)
             return None
 
-    async def async_download_video(self, video_url: str) -> bytes | None:
-        """Download video content."""
+    async def async_get_devices(self) -> list[dict[str, Any]]:
+        """Get devices from Reolink Cloud."""
+        if not self.is_authenticated:
+            if not await self.async_login():
+                return []
+
+        headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {self._access_token}",
+        }
+
         try:
-            async with self._session.get(video_url) as resp:
+            url = "https://apis.reolink.com/v1.0/devices"
+            async with self._session.get(url, headers=headers) as resp:
                 if resp.status == 200:
-                    return await resp.read()
-                return None
+                    result = await resp.json()
+                    return result.get("devices", [])
+                return []
 
         except Exception as err:
-            _LOGGER.error("Failed to download video: %s", err)
-            return None
-
-    async def async_get_thumbnail(self, thumbnail_url: str) -> bytes | None:
-        """Download thumbnail image."""
-        try:
-            async with self._session.get(thumbnail_url) as resp:
-                if resp.status == 200:
-                    return await resp.read()
-                return None
-
-        except Exception as err:
-            _LOGGER.error("Failed to get thumbnail: %s", err)
-            return None
+            _LOGGER.error("Failed to get devices: %s", err)
+            return []
 
     async def async_download_file(self, url: str) -> bytes | None:
         """Download any file (thumbnail, video, etc.)."""
