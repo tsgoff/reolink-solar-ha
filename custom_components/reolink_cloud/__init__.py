@@ -15,6 +15,7 @@ from .coordinator import ReolinkCloudCoordinator
 from .api import ReolinkCloudAPI
 from .services import async_setup_services, async_unload_services
 from .views import async_setup_views
+from .panel import async_setup_panel
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,10 +44,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
     }
     
-    # Setup services and views (only once)
+    # Setup services, views and panel (only once)
     if len(hass.data[DOMAIN]) == 1:
         await async_setup_services(hass)
         await async_setup_views(hass)
+        await async_setup_panel(hass)
     
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     

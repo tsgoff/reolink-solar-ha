@@ -1,9 +1,11 @@
 """HTTP views for Reolink Cloud media files."""
 from __future__ import annotations
 
+import json
 import logging
 import mimetypes
 import os
+from datetime import datetime
 from pathlib import Path
 
 from aiohttp import web
@@ -14,6 +16,117 @@ from homeassistant.core import HomeAssistant
 from .const import DEFAULT_STORAGE_PATH
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ReolinkCloudVideoListView(HomeAssistantView):
+    """View to list Reolink Cloud videos for a specific date."""
+
+    url = "/api/reolink_cloud/videos/{date}"
+    name = "reolink_cloud:videos"
+    requires_auth = True
+
+    def __init__(self, storage_path: str) -> None:
+        """Initialize the view."""
+        self._storage_path = storage_path
+
+    async def get(self, request: web.Request, date: str) -> web.Response:
+        """Handle GET request for video list."""
+        # Validate date format
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            return web.Response(
+                status=400,
+                text=json.dumps({"error": "Invalid date format. Use YYYY-MM-DD"}),
+                content_type="application/json",
+            )
+
+        date_path = os.path.join(self._storage_path, date)
+        
+        if not os.path.exists(date_path) or not os.path.isdir(date_path):
+            return web.Response(
+                status=200,
+                text=json.dumps({"videos": [], "date": date}),
+                content_type="application/json",
+            )
+
+        videos = []
+        try:
+            for filename in sorted(os.listdir(date_path), reverse=True):
+                if filename.endswith(".mp4"):
+                    video_id = filename.replace(".mp4", "")
+                    video_path = os.path.join(date_path, filename)
+                    thumb_path = os.path.join(date_path, f"{video_id}.jpg")
+                    
+                    video_info = {
+                        "id": video_id,
+                        "video_url": f"/media/reolink_cloud/{date}/{filename}",
+                        "has_thumbnail": os.path.exists(thumb_path),
+                        "size": os.path.getsize(video_path),
+                        "created": os.path.getmtime(video_path),
+                    }
+                    
+                    if video_info["has_thumbnail"]:
+                        video_info["thumbnail_url"] = f"/media/reolink_cloud/{date}/{video_id}.jpg"
+                    
+                    videos.append(video_info)
+        except Exception as e:
+            _LOGGER.error("Error listing videos: %s", e)
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type="application/json",
+            )
+
+        return web.Response(
+            status=200,
+            text=json.dumps({"videos": videos, "date": date, "count": len(videos)}),
+            content_type="application/json",
+        )
+
+
+class ReolinkCloudDatesView(HomeAssistantView):
+    """View to list available dates with videos."""
+
+    url = "/api/reolink_cloud/dates"
+    name = "reolink_cloud:dates"
+    requires_auth = True
+
+    def __init__(self, storage_path: str) -> None:
+        """Initialize the view."""
+        self._storage_path = storage_path
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Handle GET request for available dates."""
+        dates = []
+        
+        try:
+            if os.path.exists(self._storage_path):
+                for folder in sorted(os.listdir(self._storage_path), reverse=True):
+                    folder_path = os.path.join(self._storage_path, folder)
+                    if os.path.isdir(folder_path):
+                        # Check if folder name is a valid date
+                        try:
+                            datetime.strptime(folder, "%Y-%m-%d")
+                            # Count videos in folder
+                            video_count = len([f for f in os.listdir(folder_path) if f.endswith(".mp4")])
+                            if video_count > 0:
+                                dates.append({"date": folder, "video_count": video_count})
+                        except ValueError:
+                            continue
+        except Exception as e:
+            _LOGGER.error("Error listing dates: %s", e)
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type="application/json",
+            )
+
+        return web.Response(
+            status=200,
+            text=json.dumps({"dates": dates}),
+            content_type="application/json",
+        )
 
 
 class ReolinkCloudMediaView(HomeAssistantView):
@@ -119,3 +232,6 @@ class ReolinkCloudMediaView(HomeAssistantView):
 async def async_setup_views(hass: HomeAssistant) -> None:
     """Set up HTTP views for media files."""
     hass.http.register_view(ReolinkCloudMediaView(DEFAULT_STORAGE_PATH))
+    hass.http.register_view(ReolinkCloudVideoListView(DEFAULT_STORAGE_PATH))
+    hass.http.register_view(ReolinkCloudDatesView(DEFAULT_STORAGE_PATH))
+    _LOGGER.info("Reolink Cloud HTTP views registered")
