@@ -160,3 +160,15 @@ class ReolinkCloudAPI:
         except Exception as err:
             _LOGGER.error("Failed to get thumbnail: %s", err)
             return None
+
+    async def async_download_file(self, url: str) -> bytes | None:
+        """Download any file (thumbnail, video, etc.)."""
+        try:
+            async with self._session.get(url) as resp:
+                if resp.status == 200:
+                    return await resp.read()
+                return None
+
+        except Exception as err:
+            _LOGGER.error("Failed to download file: %s", err)
+            return None

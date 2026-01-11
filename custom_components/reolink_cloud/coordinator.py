@@ -70,12 +70,13 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             start_of_day = self._selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = self._selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
             
-            videos = await self.api.async_get_videos(
+            result = await self.api.async_get_videos(
                 start_date=start_of_day,
                 end_date=end_of_day,
-                count=1000,
+                page_size=100,
             )
             
+            videos = result.get("videos", [])
             self._videos_today = videos
             
             if videos:
