@@ -3,6 +3,8 @@
 DOMAIN = "reolink_cloud"
 
 CONF_TOTP_SECRET = "totp_secret"
+CONF_MFA_CODE = "mfa_code"
+CONF_MFA_TRUST_TOKEN = "mfa_trust_token"
 CONF_STORAGE_PATH = "storage_path"
 CONF_DOWNLOAD_VIDEOS = "download_videos"
 CONF_DOWNLOAD_THUMBNAILS = "download_thumbnails"

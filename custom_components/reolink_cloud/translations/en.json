@@ -3,30 +3,35 @@
     "step": {
       "user": {
         "title": "Reolink Cloud Login",
-        "description": "Enter your Reolink Cloud credentials.\n\nThe TOTP Secret can be found in your authenticator app (1Password, etc.) - it's the long secret key, not the 6-digit code.",
+        "description": "Enter your Reolink Cloud credentials.",
         "data": {
           "username": "Email Address",
-          "password": "Password",
-          "totp_secret": "TOTP Secret (from 1Password)",
-          "storage_path": "Storage path for downloads"
+          "password": "Password"
+        }
+      },
+      "mfa": {
+        "title": "Two-Factor Authentication",
+        "description": "Enter the 6-digit code from your authenticator app for {username}.",
+        "data": {
+          "mfa_code": "6-digit MFA Code"
+        }
+      },
+      "reauth_mfa": {
+        "title": "Re-authenticate",
+        "description": "Your session has expired. Please enter the 6-digit code from your authenticator app for {username}.",
+        "data": {
+          "mfa_code": "6-digit MFA Code"
         }
       }
     },
     "error": {
-      "invalid_auth": "Authentication failed. Please check username, password and TOTP secret.",
+      "invalid_auth": "Invalid username or password.",
+      "invalid_mfa_code": "Invalid MFA code. Please try again.",
       "unknown": "Unknown error occurred."
     },
     "abort": {
-      "already_configured": "This account is already configured."
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "data": {
-          "storage_path": "Storage path for downloads"
-        }
-      }
+      "already_configured": "This account is already configured.",
+      "reauth_successful": "Re-authentication successful."
     }
   }
 }

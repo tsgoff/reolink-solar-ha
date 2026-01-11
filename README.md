@@ -33,21 +33,13 @@ A custom integration to access Reolink Cloud videos and thumbnails in Home Assis
 
 1. Settings → Devices & Services → Add Integration
 2. Search for "Reolink Cloud"
-3. Enter:
-   - **Email**: Your Reolink account email
-   - **Password**: Your Reolink password
-   - **TOTP Secret**: The secret from your authenticator app (see below)
+3. Enter your **Email** and **Password**
+4. Enter the **6-digit MFA code** from your authenticator app
+5. Done! The integration will store a trust token for future logins.
 
-### Getting the TOTP Secret from 1Password
+### MFA Trust Token
 
-1. Open 1Password → Reolink entry
-2. Click edit on the "One-Time Password" field
-3. You'll see a URL like: `otpauth://totp/Reolink:email@example.com?secret=ABCDEFGH123456&issuer=Reolink`
-4. Copy the part after `secret=` (in this example: `ABCDEFGH123456`)
-
-### Getting the TOTP Secret from other authenticator apps
-
-Most authenticator apps allow you to export or view the secret key. Look for options like "Export", "Show secret key", or "Manual entry" in your app's settings.
+After the initial setup with your 6-digit MFA code, the integration stores a "trust token" that allows automatic login for approximately 35 days. When it expires, Home Assistant will prompt you to re-authenticate with a new MFA code.
 
 ## Entities
 
@@ -147,9 +139,13 @@ Videos are saved by default to:
 
 ### Login fails
 
-1. Check if the TOTP secret is correct (the long string, not the 6-digit code)
-2. Make sure the time on your HA server is correct (important for TOTP)
+1. Check your username and password
+2. Make sure the 6-digit MFA code is current (codes change every 30 seconds)
 3. Check the logs: Settings → System → Logs
+
+### Re-authentication required
+
+The MFA trust token expires after approximately 35 days. When this happens, Home Assistant will show a notification asking you to re-authenticate. Simply enter your current 6-digit MFA code to continue.
 
 ### Videos not loading
 
