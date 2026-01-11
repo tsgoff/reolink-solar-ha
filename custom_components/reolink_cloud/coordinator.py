@@ -123,7 +123,7 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_download_video(self, video_id: str, save_permanently: bool = False) -> str | None:
         """Download a specific video."""
-        video_url = await self.api.async_get_video_download_url(video_id)
+        video_url = await self.api.async_get_video_url(video_id)
         if not video_url:
             return None
             

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
@@ -99,8 +99,8 @@ class ReolinkCloudLastVideoSensor(CoordinatorEntity[ReolinkCloudCoordinator], Se
         if self.coordinator.last_video:
             created_at = self.coordinator.last_video.get("createdAt")
             if created_at:
-                # createdAt is in milliseconds
-                return datetime.fromtimestamp(created_at / 1000)
+                # createdAt is in milliseconds, return timezone-aware datetime
+                return datetime.fromtimestamp(created_at / 1000, tz=timezone.utc)
         return None
 
     @property
