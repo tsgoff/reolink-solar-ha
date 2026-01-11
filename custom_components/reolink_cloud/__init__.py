@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
-from .const import DOMAIN, CONF_MFA_TRUST_TOKEN
+from .const import DOMAIN
 from .coordinator import ReolinkCloudCoordinator
 from .api import ReolinkCloudAPI
 from .services import async_setup_services, async_unload_services
@@ -28,13 +28,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         session=session,
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
-        mfa_trust_token=entry.data.get(CONF_MFA_TRUST_TOKEN),
     )
     
     # Initial login
     if not await api.async_login():
-        # MFA trust token might be expired, trigger reauth
-        raise ConfigEntryAuthFailed("MFA trust token expired. Please re-authenticate.")
+        raise ConfigEntryAuthFailed("Login failed. Please check your credentials.")
     
     coordinator = ReolinkCloudCoordinator(hass, api)
     await coordinator.async_config_entry_first_refresh()

@@ -9,24 +9,17 @@
           "password": "Passwort"
         }
       },
-      "mfa": {
-        "title": "Zwei-Faktor-Authentifizierung",
-        "description": "Gib den 6-stelligen Code aus deiner Authenticator App für {username} ein.",
-        "data": {
-          "mfa_code": "6-stelliger MFA Code"
-        }
-      },
-      "reauth_mfa": {
+      "reauth_confirm": {
         "title": "Erneut authentifizieren",
-        "description": "Deine Sitzung ist abgelaufen. Bitte gib den 6-stelligen Code aus deiner Authenticator App für {username} ein.",
+        "description": "Deine Sitzung ist abgelaufen. Bitte gib deine Zugangsdaten erneut ein.",
         "data": {
-          "mfa_code": "6-stelliger MFA Code"
+          "username": "E-Mail Adresse",
+          "password": "Passwort"
         }
       }
     },
     "error": {
       "invalid_auth": "Ungültiger Benutzername oder Passwort.",
-      "invalid_mfa_code": "Ungültiger MFA Code. Bitte erneut versuchen.",
       "unknown": "Unbekannter Fehler aufgetreten."
     },
     "abort": {

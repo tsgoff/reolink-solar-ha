@@ -7,7 +7,7 @@ A custom integration to access Reolink Cloud videos and thumbnails in Home Assis
 
 ## Features
 
-- ✅ Login with Username, Password and **TOTP** (2FA) - fully automatic!
+- ✅ Login with Username and Password
 - ✅ Displays the latest thumbnail as a camera entity
 - ✅ Video count per day as sensor
 - ✅ Last video timestamp as sensor
@@ -34,12 +34,7 @@ A custom integration to access Reolink Cloud videos and thumbnails in Home Assis
 1. Settings → Devices & Services → Add Integration
 2. Search for "Reolink Cloud"
 3. Enter your **Email** and **Password**
-4. Enter the **6-digit MFA code** from your authenticator app
-5. Done! The integration will store a trust token for future logins.
-
-### MFA Trust Token
-
-After the initial setup with your 6-digit MFA code, the integration stores a "trust token" that allows automatic login for approximately 35 days. When it expires, Home Assistant will prompt you to re-authenticate with a new MFA code.
+4. Done!
 
 ## Entities
 
@@ -140,12 +135,7 @@ Videos are saved by default to:
 ### Login fails
 
 1. Check your username and password
-2. Make sure the 6-digit MFA code is current (codes change every 30 seconds)
-3. Check the logs: Settings → System → Logs
-
-### Re-authentication required
-
-The MFA trust token expires after approximately 35 days. When this happens, Home Assistant will show a notification asking you to re-authenticate. Simply enter your current 6-digit MFA code to continue.
+2. Check the logs: Settings → System → Logs
 
 ### Videos not loading
 

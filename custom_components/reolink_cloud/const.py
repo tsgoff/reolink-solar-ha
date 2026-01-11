@@ -2,9 +2,6 @@
 
 DOMAIN = "reolink_cloud"
 
-CONF_TOTP_SECRET = "totp_secret"
-CONF_MFA_CODE = "mfa_code"
-CONF_MFA_TRUST_TOKEN = "mfa_trust_token"
 CONF_STORAGE_PATH = "storage_path"
 CONF_DOWNLOAD_VIDEOS = "download_videos"
 CONF_DOWNLOAD_THUMBNAILS = "download_thumbnails"
@@ -15,7 +12,6 @@ DEFAULT_STORAGE_PATH = "/config/reolink_cloud"
 API_BASE_URL = "https://apis.reolink.com"
 API_TOKEN_URL = f"{API_BASE_URL}/v1.0/oauth2/token/"
 API_VIDEOS_URL = f"{API_BASE_URL}/v2/videos/"
-API_MFA_VERIFY_URL = f"{API_BASE_URL}/v1.0/users/mfa/verify"
 
 CLIENT_ID = "REO-.AJ,HO/L6_TG44T78KB7"
 

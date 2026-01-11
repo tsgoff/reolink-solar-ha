@@ -9,24 +9,17 @@
           "password": "Password"
         }
       },
-      "mfa": {
-        "title": "Two-Factor Authentication",
-        "description": "Enter the 6-digit code from your authenticator app for {username}.",
-        "data": {
-          "mfa_code": "6-digit MFA Code"
-        }
-      },
-      "reauth_mfa": {
+      "reauth_confirm": {
         "title": "Re-authenticate",
-        "description": "Your session has expired. Please enter the 6-digit code from your authenticator app for {username}.",
+        "description": "Your session has expired. Please enter your credentials again.",
         "data": {
-          "mfa_code": "6-digit MFA Code"
+          "username": "Email Address",
+          "password": "Password"
         }
       }
     },
     "error": {
       "invalid_auth": "Invalid username or password.",
-      "invalid_mfa_code": "Invalid MFA code. Please try again.",
       "unknown": "Unknown error occurred."
     },
     "abort": {
