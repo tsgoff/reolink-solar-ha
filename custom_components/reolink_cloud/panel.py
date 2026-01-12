@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from homeassistant.components import frontend, panel_custom
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, DEFAULT_STORAGE_PATH
@@ -17,11 +18,13 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_panel(hass: HomeAssistant) -> None:
     """Set up the Reolink Cloud panel."""
     # Register the panel
-    hass.http.register_static_path(
-        "/reolink_cloud/gallery",
-        hass.config.path("custom_components/reolink_cloud/www"),
-        cache_headers=False,
-    )
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            "/reolink_cloud/gallery",
+            hass.config.path("custom_components/reolink_cloud/www"),
+            cache_headers=False,
+        )
+    ])
     
     await panel_custom.async_register_panel(
         hass,
