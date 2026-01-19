@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, Callable, Awaitable
 
 from aiohttp import ClientSession
 
@@ -21,6 +21,7 @@ class ReolinkCloudAPI:
         session: ClientSession,
         username: str,
         password: str,
+        token_callback: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
     ) -> None:
         """Initialize the API client."""
         self._session = session
@@ -28,11 +29,30 @@ class ReolinkCloudAPI:
         self._password = password
         self._access_token: str | None = None
         self._token_expires_at: float = 0
+        self._token_callback = token_callback
 
     @property
     def is_authenticated(self) -> bool:
         """Check if we have a valid token."""
         return self._access_token is not None and time.time() < self._token_expires_at - 60
+
+    def restore_token(self, token_data: dict[str, Any]) -> bool:
+        """Restore token from stored data."""
+        if not token_data:
+            return False
+        
+        access_token = token_data.get("access_token")
+        expires_at = token_data.get("expires_at", 0)
+        
+        if access_token and time.time() < expires_at - 60:
+            self._access_token = access_token
+            self._token_expires_at = expires_at
+            _LOGGER.debug("Token restored from storage, valid until %s", 
+                         datetime.fromtimestamp(expires_at).isoformat())
+            return True
+        
+        _LOGGER.debug("Stored token is expired or invalid")
+        return False
 
     async def async_login(self) -> bool:
         """Login to Reolink Cloud."""
@@ -60,7 +80,16 @@ class ReolinkCloudAPI:
             if "access_token" in result:
                 self._access_token = result["access_token"]
                 self._token_expires_at = time.time() + result.get("expires_in", 1800)
-                _LOGGER.debug("Login successful")
+                _LOGGER.debug("Login successful, token valid until %s",
+                             datetime.fromtimestamp(self._token_expires_at).isoformat())
+                
+                # Save token for persistence
+                if self._token_callback:
+                    await self._token_callback({
+                        "access_token": self._access_token,
+                        "expires_at": self._token_expires_at,
+                    })
+                
                 return True
 
             _LOGGER.error("Login failed: %s", result.get("error", result))
