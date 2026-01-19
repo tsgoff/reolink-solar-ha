@@ -17,6 +17,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_panel(hass: HomeAssistant) -> None:
     """Set up the Reolink Cloud panel."""
+    # Check if panel is already registered
+    if "reolink-cloud" in hass.data.get("frontend_panels", {}):
+        _LOGGER.debug("Panel already registered, skipping")
+        return
+    
     # Register the panel
     await hass.http.async_register_static_paths([
         StaticPathConfig(
