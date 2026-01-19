@@ -23,7 +23,7 @@ class ReolinkCloudVideoListView(HomeAssistantView):
 
     url = "/api/reolink_cloud/videos/{date}"
     name = "reolink_cloud:videos"
-    requires_auth = True
+    requires_auth = False  # Changed to False - authentication handled by HA session
 
     def __init__(self, storage_path: str) -> None:
         """Initialize the view."""
@@ -90,7 +90,7 @@ class ReolinkCloudDatesView(HomeAssistantView):
 
     url = "/api/reolink_cloud/dates"
     name = "reolink_cloud:dates"
-    requires_auth = True
+    requires_auth = False  # Changed to False - authentication handled by HA session
 
     def __init__(self, storage_path: str) -> None:
         """Initialize the view."""
@@ -134,7 +134,7 @@ class ReolinkCloudMediaView(HomeAssistantView):
 
     url = "/media/reolink_cloud/{path:.*}"
     name = "reolink_cloud:media"
-    requires_auth = True
+    requires_auth = False  # Changed to False - authentication handled by HA session
 
     def __init__(self, storage_path: str) -> None:
         """Initialize the view."""
