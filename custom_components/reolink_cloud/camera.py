@@ -54,19 +54,29 @@ class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Ca
             "model": "Cloud",
         }
         self._cached_image: bytes | None = None
+        self._last_video_id: str | None = None
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return the latest thumbnail."""
         thumbnail_path = self.coordinator.last_thumbnail_path
+        current_video_id = self.coordinator.last_video.get("id") if self.coordinator.last_video else None
+        
+        # Clear cache if video ID changed
+        if current_video_id != self._last_video_id:
+            self._cached_image = None
+            self._last_video_id = current_video_id
+            _LOGGER.debug("Video ID changed to %s, clearing cache", current_video_id)
         
         if thumbnail_path and os.path.exists(thumbnail_path):
             def read_image():
                 with open(thumbnail_path, "rb") as f:
                     return f.read()
             
-            return await self.hass.async_add_executor_job(read_image)
+            image_data = await self.hass.async_add_executor_job(read_image)
+            self._cached_image = image_data
+            return image_data
         
         # If no local file, try to download from URL
         if self.coordinator.last_video:

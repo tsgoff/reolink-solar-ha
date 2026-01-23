@@ -66,6 +66,13 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Reolink Cloud."""
         try:
+            # Always use today's date unless explicitly changed
+            today = datetime.now()
+            if self._selected_date.date() != today.date():
+                _LOGGER.debug("Selected date (%s) differs from today (%s), updating to today", 
+                            self._selected_date.date(), today.date())
+                self._selected_date = today
+            
             # Get videos for selected date
             start_of_day = self._selected_date.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = self._selected_date.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -79,13 +86,31 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             
             self._videos_today = videos
             
+            _LOGGER.info("Found %d videos for %s", len(videos), self._selected_date.date())
+            
             if videos:
                 # Get the most recent video (first item, sorted by createdAt desc)
-                self._last_video = videos[0]
+                latest_video = videos[0]
+                latest_video_id = latest_video.get("id")
+                current_video_id = self._last_video.get("id") if self._last_video else None
                 
-                # Download latest thumbnail
-                if self._last_video.get("coverUrl"):
+                _LOGGER.info("Latest video ID: %s, Current video ID: %s", latest_video_id, current_video_id)
+                
+                # Check if this is a different video than before
+                video_changed = (
+                    not self._last_video or 
+                    current_video_id != latest_video_id
+                )
+                
+                self._last_video = latest_video
+                
+                # Always download latest thumbnail when video changes or on first run
+                if video_changed and self._last_video.get("coverUrl"):
+                    _LOGGER.info("New video detected (changed: %s), downloading thumbnail for video ID: %s", 
+                               video_changed, latest_video_id)
                     await self._download_latest_thumbnail()
+                else:
+                    _LOGGER.debug("Video unchanged, skipping thumbnail download")
             
             return {
                 "videos": videos,
@@ -101,12 +126,16 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _download_latest_thumbnail(self) -> None:
         """Download the latest thumbnail."""
         if not self._last_video:
+            _LOGGER.warning("No last video to download thumbnail for")
             return
             
         cover_url = self._last_video.get("coverUrl")
         if not cover_url:
+            _LOGGER.warning("No cover URL for video %s", self._last_video.get("id"))
             return
-            
+        
+        _LOGGER.info("Downloading thumbnail from: %s", cover_url)
+        
         # Create storage directory
         os.makedirs(self._storage_path, exist_ok=True)
         
@@ -115,11 +144,16 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if data:
             self._last_thumbnail_path = os.path.join(self._storage_path, "latest_thumbnail.jpg")
             
+            _LOGGER.info("Saving thumbnail to: %s (size: %d bytes)", self._last_thumbnail_path, len(data))
+            
             def write_file():
                 with open(self._last_thumbnail_path, "wb") as f:
                     f.write(data)
             
             await self.hass.async_add_executor_job(write_file)
+            _LOGGER.info("Thumbnail saved successfully")
+        else:
+            _LOGGER.error("Failed to download thumbnail data")
 
     async def async_download_video(self, video_id: str, save_permanently: bool = False) -> str | None:
         """Download a specific video."""
@@ -179,7 +213,9 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     thumb_data = await self.api.async_download_file(cover_url)
                     if thumb_data:
                         date_str = date.strftime("%Y-%m-%d")
-                        thumb_path = os.path.join(self._storage_path, date_str, f"{video_id}.jpg")
+                        thumb_dir = os.path.join(self._storage_path, date_str)
+                        os.makedirs(thumb_dir, exist_ok=True)  # Ensure directory exists
+                        thumb_path = os.path.join(thumb_dir, f"{video_id}.jpg")
                         
                         def write_thumb():
                             with open(thumb_path, "wb") as f:
