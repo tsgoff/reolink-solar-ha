@@ -211,3 +211,68 @@ class ReolinkCloudAPI:
         except Exception as err:
             _LOGGER.error("Failed to download file: %s", err)
             return None
+
+    async def async_start_livestream(self, device_id: str) -> dict[str, Any] | None:
+        """Start a livestream for a device."""
+        if not self.is_authenticated:
+            if not await self.async_login():
+                return None
+
+        headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {self._access_token}",
+            "content-type": "application/json",
+            "origin": "https://cloud.reolink.com",
+            "referer": "https://cloud.reolink.com/",
+        }
+
+        data = {
+            "type": "flv",
+            "quality": "fluent",  # or "clear" for higher quality
+        }
+
+        try:
+            url = f"https://apis.reolink.com/v2/devices/{device_id}/liveStreaming/start"
+            async with self._session.post(url, json=data, headers=headers) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    _LOGGER.info("Livestream started for device %s: %s", device_id, result)
+                    return result
+                else:
+                    error_text = await resp.text()
+                    _LOGGER.error("Failed to start livestream (status %s): %s", resp.status, error_text)
+                    return None
+
+        except Exception as err:
+            _LOGGER.error("Failed to start livestream: %s", err)
+            return None
+
+    async def async_stop_livestream(self, device_id: str, stream_id: str) -> bool:
+        """Stop an active livestream."""
+        if not self.is_authenticated:
+            if not await self.async_login():
+                return False
+
+        headers = {
+            "accept": "application/json",
+            "authorization": f"Bearer {self._access_token}",
+            "content-type": "application/json",
+            "origin": "https://cloud.reolink.com",
+            "referer": "https://cloud.reolink.com/",
+        }
+
+        data = {"id": stream_id}
+
+        try:
+            url = f"https://apis.reolink.com/v2/devices/{device_id}/liveStreaming/stop"
+            async with self._session.post(url, json=data, headers=headers) as resp:
+                success = resp.status == 200
+                if success:
+                    _LOGGER.info("Livestream stopped for device %s", device_id)
+                else:
+                    _LOGGER.error("Failed to stop livestream (status %s)", resp.status)
+                return success
+
+        except Exception as err:
+            _LOGGER.error("Failed to stop livestream: %s", err)
+            return False

@@ -1,6 +1,7 @@
 """Camera platform for Reolink Cloud."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any
@@ -16,6 +17,9 @@ from .coordinator import ReolinkCloudCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# Stream timeout in seconds (auto-stop after 5 minutes of inactivity)
+STREAM_TIMEOUT = 300
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -26,16 +30,16 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     async_add_entities([
-        ReolinkCloudLatestThumbnail(coordinator, entry),
+        ReolinkCloudLiveCamera(coordinator, entry),
     ])
 
 
-class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Camera):
-    """Camera entity showing the latest thumbnail from Reolink Cloud."""
+class ReolinkCloudLiveCamera(CoordinatorEntity[ReolinkCloudCoordinator], Camera):
+    """Camera entity with livestream support."""
 
     _attr_has_entity_name = True
-    _attr_name = "Latest Thumbnail"
-    _attr_supported_features = CameraEntityFeature(0)
+    _attr_name = "Reolink Cloud Camera"
+    _attr_supported_features = CameraEntityFeature.STREAM
 
     def __init__(
         self,
@@ -46,7 +50,7 @@ class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Ca
         super().__init__(coordinator)
         Camera.__init__(self)
         
-        self._attr_unique_id = f"{entry.entry_id}_latest_thumbnail"
+        self._attr_unique_id = f"{entry.entry_id}_live_camera"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry.entry_id)},
             "name": "Reolink Cloud",
@@ -55,6 +59,7 @@ class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Ca
         }
         self._cached_image: bytes | None = None
         self._last_video_id: str | None = None
+        self._stream_stop_task: asyncio.Task | None = None
 
     async def async_camera_image(
         self, width: int | None = None, height: int | None = None
@@ -89,11 +94,60 @@ class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Ca
         
         return self._cached_image
 
+    async def stream_source(self) -> str | None:
+        """Return the stream source URL."""
+        # Cancel any pending auto-stop task
+        if self._stream_stop_task and not self._stream_stop_task.done():
+            self._stream_stop_task.cancel()
+        
+        # If stream is already active, return it
+        if self.coordinator.active_stream:
+            _LOGGER.debug("Reusing existing stream")
+            # Schedule auto-stop
+            self._schedule_stream_stop()
+            return self.coordinator.active_stream.get("url")
+        
+        # Start new stream
+        _LOGGER.info("Starting new livestream")
+        stream_url = await self.coordinator.async_start_stream()
+        
+        if stream_url:
+            # Schedule auto-stop after timeout
+            self._schedule_stream_stop()
+            return stream_url
+        
+        _LOGGER.error("Failed to start livestream")
+        return None
+
+    def _schedule_stream_stop(self) -> None:
+        """Schedule automatic stream stop after timeout."""
+        async def _auto_stop():
+            try:
+                await asyncio.sleep(STREAM_TIMEOUT)
+                _LOGGER.info("Auto-stopping stream after %d seconds of inactivity", STREAM_TIMEOUT)
+                await self.coordinator.async_stop_stream()
+            except asyncio.CancelledError:
+                pass
+        
+        self._stream_stop_task = self.hass.async_create_task(_auto_stop())
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop stream when entity is removed."""
+        if self._stream_stop_task and not self._stream_stop_task.done():
+            self._stream_stop_task.cancel()
+        await self.coordinator.async_stop_stream()
+
+    @property
+    def is_streaming(self) -> bool:
+        """Return true if currently streaming."""
+        return self.coordinator.active_stream is not None
+
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return extra state attributes."""
         attrs = {
             "video_count_today": self.coordinator.video_count_today,
+            "is_streaming": self.is_streaming,
         }
         
         if self.coordinator.last_video:
@@ -104,6 +158,9 @@ class ReolinkCloudLatestThumbnail(CoordinatorEntity[ReolinkCloudCoordinator], Ca
                 "last_video_duration": video.get("duration"),
                 "last_video_device": video.get("deviceName"),
             })
+        
+        if self.coordinator.active_stream:
+            attrs["stream_started_at"] = self.coordinator.active_stream.get("started_at").isoformat()
         
         return attrs
 

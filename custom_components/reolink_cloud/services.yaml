@@ -25,3 +25,7 @@ set_date:
       required: true
       selector:
         date:
+
+stop_stream:
+  name: Stop Livestream
+  description: Stop the active livestream to save camera battery
