@@ -181,6 +181,7 @@ class ReolinkCloudAPI:
         """Get devices from Reolink Cloud."""
         if not self.is_authenticated:
             if not await self.async_login():
+                _LOGGER.error("Not authenticated, cannot get devices")
                 return []
 
         headers = {
@@ -190,14 +191,26 @@ class ReolinkCloudAPI:
 
         try:
             url = "https://apis.reolink.com/v1.0/devices"
+            _LOGGER.info("Fetching devices from: %s", url)
+            
             async with self._session.get(url, headers=headers) as resp:
                 if resp.status == 200:
                     result = await resp.json()
-                    return result.get("devices", [])
-                return []
+                    devices = result.get("devices", [])
+                    _LOGGER.info("Found %d devices", len(devices))
+                    for device in devices:
+                        _LOGGER.info("Device: %s (ID: %s, Model: %s)", 
+                                   device.get("deviceName"), 
+                                   device.get("deviceId"),
+                                   device.get("deviceModel"))
+                    return devices
+                else:
+                    error_text = await resp.text()
+                    _LOGGER.error("Failed to get devices (status %s): %s", resp.status, error_text)
+                    return []
 
         except Exception as err:
-            _LOGGER.error("Failed to get devices: %s", err)
+            _LOGGER.error("Exception while getting devices: %s", err, exc_info=True)
             return []
 
     async def async_download_file(self, url: str) -> bytes | None:
@@ -216,6 +229,7 @@ class ReolinkCloudAPI:
         """Start a livestream for a device."""
         if not self.is_authenticated:
             if not await self.async_login():
+                _LOGGER.error("Not authenticated, cannot start livestream")
                 return None
 
         headers = {
@@ -233,18 +247,24 @@ class ReolinkCloudAPI:
 
         try:
             url = f"https://apis.reolink.com/v2/devices/{device_id}/liveStreaming/start"
+            _LOGGER.info("Sending livestream start request to: %s", url)
+            _LOGGER.debug("Request data: %s", data)
+            
             async with self._session.post(url, json=data, headers=headers) as resp:
+                response_text = await resp.text()
+                _LOGGER.info("Livestream API response (status %s): %s", resp.status, response_text)
+                
                 if resp.status == 200:
-                    result = await resp.json()
-                    _LOGGER.info("Livestream started for device %s: %s", device_id, result)
+                    result = await resp.json() if not response_text.startswith('{') else eval(response_text)
+                    _LOGGER.info("Livestream started successfully for device %s", device_id)
+                    _LOGGER.debug("Stream info: %s", result)
                     return result
                 else:
-                    error_text = await resp.text()
-                    _LOGGER.error("Failed to start livestream (status %s): %s", resp.status, error_text)
+                    _LOGGER.error("Failed to start livestream (status %s): %s", resp.status, response_text)
                     return None
 
         except Exception as err:
-            _LOGGER.error("Failed to start livestream: %s", err)
+            _LOGGER.error("Exception while starting livestream: %s", err, exc_info=True)
             return None
 
     async def async_stop_livestream(self, device_id: str, stream_id: str) -> bool:

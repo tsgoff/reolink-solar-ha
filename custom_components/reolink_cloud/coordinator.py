@@ -256,13 +256,17 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Start a livestream and return the stream URL."""
         if device_id is None:
             device_id = self.primary_device_id
+            _LOGGER.info("Using primary device ID: %s", device_id)
         
         if not device_id:
             _LOGGER.error("No device ID available for livestream")
+            _LOGGER.error("Devices loaded: %s", len(self._devices))
+            _LOGGER.error("Last video: %s", self._last_video.get("deviceId") if self._last_video else "None")
             return None
         
         # Stop any existing stream first
         if self._active_stream:
+            _LOGGER.info("Stopping existing stream before starting new one")
             await self.async_stop_stream()
         
         _LOGGER.info("Starting livestream for device %s", device_id)
@@ -275,9 +279,12 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "url": stream_info.get("url"),
                 "started_at": datetime.now(),
             }
-            _LOGGER.info("Livestream started: %s", self._active_stream.get("url"))
+            _LOGGER.info("Livestream started successfully!")
+            _LOGGER.info("Stream URL: %s", self._active_stream.get("url"))
+            _LOGGER.info("Stream ID: %s", self._active_stream.get("stream_id"))
             return self._active_stream.get("url")
         
+        _LOGGER.error("stream_info was None, livestream failed to start")
         return None
 
     async def async_stop_stream(self) -> bool:
