@@ -28,6 +28,8 @@ async def async_setup_entry(
         ReolinkCloudDownloadLatestButton(coordinator, entry),
         ReolinkCloudDownloadAllTodayButton(coordinator, entry),
         ReolinkCloudRefreshButton(coordinator, entry),
+        ReolinkCloudStartStreamButton(coordinator, entry),
+        ReolinkCloudStopStreamButton(coordinator, entry),
     ])
 
 
@@ -122,3 +124,69 @@ class ReolinkCloudRefreshButton(CoordinatorEntity[ReolinkCloudCoordinator], Butt
     async def async_press(self) -> None:
         """Handle button press."""
         await self.coordinator.async_request_refresh()
+
+
+class ReolinkCloudStartStreamButton(CoordinatorEntity[ReolinkCloudCoordinator], ButtonEntity):
+    """Button to start livestream."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Start Livestream"
+    _attr_icon = "mdi:play-circle"
+
+    def __init__(
+        self,
+        coordinator: ReolinkCloudCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator)
+        
+        self._attr_unique_id = f"{entry.entry_id}_start_stream"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "Reolink Cloud",
+            "manufacturer": "Reolink",
+            "model": "Cloud",
+        }
+
+    async def async_press(self) -> None:
+        """Handle button press."""
+        _LOGGER.info("Starting livestream via button")
+        stream_url = await self.coordinator.async_start_stream()
+        if stream_url:
+            _LOGGER.info("Livestream started! URL: %s", stream_url)
+        else:
+            _LOGGER.error("Failed to start livestream")
+
+
+class ReolinkCloudStopStreamButton(CoordinatorEntity[ReolinkCloudCoordinator], ButtonEntity):
+    """Button to stop livestream."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Stop Livestream"
+    _attr_icon = "mdi:stop-circle"
+
+    def __init__(
+        self,
+        coordinator: ReolinkCloudCoordinator,
+        entry: ConfigEntry,
+    ) -> None:
+        """Initialize the button."""
+        super().__init__(coordinator)
+        
+        self._attr_unique_id = f"{entry.entry_id}_stop_stream"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": "Reolink Cloud",
+            "manufacturer": "Reolink",
+            "model": "Cloud",
+        }
+
+    async def async_press(self) -> None:
+        """Handle button press."""
+        _LOGGER.info("Stopping livestream via button")
+        success = await self.coordinator.async_stop_stream()
+        if success:
+            _LOGGER.info("Livestream stopped")
+        else:
+            _LOGGER.warning("No active stream to stop")
