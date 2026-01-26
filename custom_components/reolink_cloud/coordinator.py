@@ -78,11 +78,32 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def primary_device_id(self) -> str | None:
         """Get the first device ID (for single-device setups)."""
+        # Try to get from devices list first
         if self._devices:
-            return self._devices[0].get("deviceId")
+            device = self._devices[0]
+            # Try different possible field names
+            device_id = (
+                device.get("deviceId") or 
+                device.get("device_id") or 
+                device.get("id") or
+                device.get("uuid")
+            )
+            if device_id:
+                _LOGGER.debug("Using device ID from devices list: %s", device_id)
+                return device_id
+        
         # Fallback: try to get from last video
         if self._last_video:
-            return self._last_video.get("deviceId")
+            device_id = (
+                self._last_video.get("deviceId") or
+                self._last_video.get("device_id") or
+                self._last_video.get("deviceUuid")
+            )
+            if device_id:
+                _LOGGER.debug("Using device ID from last video: %s", device_id)
+                return device_id
+        
+        _LOGGER.warning("Could not find device ID in devices or videos")
         return None
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -120,6 +141,14 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 latest_video = videos[0]
                 latest_video_id = latest_video.get("id")
                 current_video_id = self._last_video.get("id") if self._last_video else None
+                
+                # Log video structure for debugging
+                if not self._last_video:
+                    _LOGGER.info("First video structure: %s", list(latest_video.keys()))
+                    _LOGGER.info("Video device fields: deviceId=%s, device_id=%s, deviceUuid=%s",
+                               latest_video.get("deviceId"),
+                               latest_video.get("device_id"),
+                               latest_video.get("deviceUuid"))
                 
                 _LOGGER.info("Latest video ID: %s, Current video ID: %s", latest_video_id, current_video_id)
                 

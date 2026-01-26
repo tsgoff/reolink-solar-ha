@@ -196,10 +196,15 @@ class ReolinkCloudAPI:
             async with self._session.get(url, headers=headers) as resp:
                 if resp.status == 200:
                     result = await resp.json()
+                    _LOGGER.info("Raw devices API response: %s", result)
+                    
                     devices = result.get("devices", [])
                     _LOGGER.info("Found %d devices", len(devices))
-                    for device in devices:
-                        _LOGGER.info("Device: %s (ID: %s, Model: %s)", 
+                    
+                    for idx, device in enumerate(devices):
+                        _LOGGER.info("Device %d full data: %s", idx, device)
+                        _LOGGER.info("Device %d: Name=%s, ID=%s, Model=%s", 
+                                   idx,
                                    device.get("deviceName"), 
                                    device.get("deviceId"),
                                    device.get("deviceModel"))
