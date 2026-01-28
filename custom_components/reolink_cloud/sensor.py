@@ -7,7 +7,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -28,7 +28,6 @@ async def async_setup_entry(
     async_add_entities([
         ReolinkCloudVideoCountSensor(coordinator, entry),
         ReolinkCloudLastVideoSensor(coordinator, entry),
-        ReolinkCloudStreamUrlSensor(coordinator, entry),
     ])
 
 
@@ -117,54 +116,4 @@ class ReolinkCloudLastVideoSensor(CoordinatorEntity[ReolinkCloudCoordinator], Se
                 "cover_url": video.get("coverUrl"),
                 "channel_name": video.get("channelName"),
             })
-        return attrs
-
-
-class ReolinkCloudStreamUrlSensor(CoordinatorEntity[ReolinkCloudCoordinator], SensorEntity):
-    """Sensor showing livestream URL."""
-
-    _attr_has_entity_name = True
-    _attr_name = "Stream URL"
-    _attr_icon = "mdi:video-wireless"
-
-    def __init__(
-        self,
-        coordinator: ReolinkCloudCoordinator,
-        entry: ConfigEntry,
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        
-        self._attr_unique_id = f"{entry.entry_id}_stream_url"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, entry.entry_id)},
-            "name": "Reolink Cloud",
-            "manufacturer": "Reolink",
-            "model": "Cloud",
-        }
-
-    @property
-    def native_value(self) -> str | None:
-        """Return the stream URL."""
-        if self.coordinator.active_stream:
-            return self.coordinator.active_stream.get("url")
-        return "No active stream"
-
-    @property
-    def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra state attributes."""
-        attrs = {
-            "is_streaming": self.coordinator.active_stream is not None,
-        }
-        
-        if self.coordinator.active_stream:
-            attrs.update({
-                "device_id": self.coordinator.active_stream.get("device_id"),
-                "stream_id": self.coordinator.active_stream.get("stream_id"),
-                "started_at": self.coordinator.active_stream.get("started_at").isoformat(),
-            })
-        
-        if self.coordinator.primary_device_id:
-            attrs["device_id"] = self.coordinator.primary_device_id
-        
         return attrs

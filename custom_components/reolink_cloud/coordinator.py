@@ -33,8 +33,6 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_video_path: str | None = None
         self._videos_today: list[dict[str, Any]] = []
         self._selected_date: datetime = datetime.now()
-        self._devices: list[dict[str, Any]] = []
-        self._active_stream: dict[str, Any] | None = None
 
     @property
     def last_video(self) -> dict[str, Any] | None:
@@ -65,55 +63,9 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Set the selected date for filtering."""
         self._selected_date = date
 
-    @property
-    def devices(self) -> list[dict[str, Any]]:
-        """Return available devices."""
-        return self._devices
-
-    @property
-    def active_stream(self) -> dict[str, Any] | None:
-        """Return active stream info."""
-        return self._active_stream
-
-    @property
-    def primary_device_id(self) -> str | None:
-        """Get the first device ID (for single-device setups)."""
-        # Try to get from devices list first
-        if self._devices:
-            device = self._devices[0]
-            # Try different possible field names
-            device_id = (
-                device.get("deviceId") or 
-                device.get("device_id") or 
-                device.get("id") or
-                device.get("uuid")
-            )
-            if device_id:
-                _LOGGER.debug("Using device ID from devices list: %s", device_id)
-                return device_id
-        
-        # Fallback: try to get from last video
-        if self._last_video:
-            device_id = (
-                self._last_video.get("deviceId") or
-                self._last_video.get("device_id") or
-                self._last_video.get("deviceUuid")
-            )
-            if device_id:
-                _LOGGER.debug("Using device ID from last video: %s", device_id)
-                return device_id
-        
-        _LOGGER.warning("Could not find device ID in devices or videos")
-        return None
-
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Reolink Cloud."""
         try:
-            # Load devices if not yet loaded
-            if not self._devices:
-                self._devices = await self.api.async_get_devices()
-                _LOGGER.info("Loaded %d devices", len(self._devices))
-            
             # Always use today's date unless explicitly changed
             today = datetime.now()
             if self._selected_date.date() != today.date():
@@ -141,14 +93,6 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 latest_video = videos[0]
                 latest_video_id = latest_video.get("id")
                 current_video_id = self._last_video.get("id") if self._last_video else None
-                
-                # Log video structure for debugging
-                if not self._last_video:
-                    _LOGGER.info("First video structure: %s", list(latest_video.keys()))
-                    _LOGGER.info("Video device fields: deviceId=%s, device_id=%s, deviceUuid=%s",
-                               latest_video.get("deviceId"),
-                               latest_video.get("device_id"),
-                               latest_video.get("deviceUuid"))
                 
                 _LOGGER.info("Latest video ID: %s, Current video ID: %s", latest_video_id, current_video_id)
                 
@@ -280,55 +224,3 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                         await self.hass.async_add_executor_job(write_thumb)
         
         return downloaded
-
-    async def async_start_stream(self, device_id: str | None = None) -> str | None:
-        """Start a livestream and return the stream URL."""
-        if device_id is None:
-            device_id = self.primary_device_id
-            _LOGGER.info("Using primary device ID: %s", device_id)
-        
-        if not device_id:
-            _LOGGER.error("No device ID available for livestream")
-            _LOGGER.error("Devices loaded: %s", len(self._devices))
-            _LOGGER.error("Last video: %s", self._last_video.get("deviceId") if self._last_video else "None")
-            return None
-        
-        # Stop any existing stream first
-        if self._active_stream:
-            _LOGGER.info("Stopping existing stream before starting new one")
-            await self.async_stop_stream()
-        
-        _LOGGER.info("Starting livestream for device %s", device_id)
-        stream_info = await self.api.async_start_livestream(device_id)
-        
-        if stream_info:
-            self._active_stream = {
-                "device_id": device_id,
-                "stream_id": stream_info.get("id"),
-                "url": stream_info.get("url"),
-                "started_at": datetime.now(),
-            }
-            _LOGGER.info("Livestream started successfully!")
-            _LOGGER.info("Stream URL: %s", self._active_stream.get("url"))
-            _LOGGER.info("Stream ID: %s", self._active_stream.get("stream_id"))
-            return self._active_stream.get("url")
-        
-        _LOGGER.error("stream_info was None, livestream failed to start")
-        return None
-
-    async def async_stop_stream(self) -> bool:
-        """Stop the active livestream."""
-        if not self._active_stream:
-            return True
-        
-        device_id = self._active_stream.get("device_id")
-        stream_id = self._active_stream.get("stream_id")
-        
-        if device_id and stream_id:
-            _LOGGER.info("Stopping livestream for device %s", device_id)
-            success = await self.api.async_stop_livestream(device_id, stream_id)
-            if success:
-                self._active_stream = None
-                return True
-        
-        return False

@@ -14,7 +14,6 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_DOWNLOAD_VIDEOS = "download_videos"
 SERVICE_SET_DATE = "set_date"
-SERVICE_STOP_STREAM = "stop_stream"
 
 SERVICE_DOWNLOAD_VIDEOS_SCHEMA = vol.Schema({
     vol.Required("date"): cv.date,
@@ -24,8 +23,6 @@ SERVICE_DOWNLOAD_VIDEOS_SCHEMA = vol.Schema({
 SERVICE_SET_DATE_SCHEMA = vol.Schema({
     vol.Required("date"): cv.date,
 })
-
-SERVICE_STOP_STREAM_SCHEMA = vol.Schema({})
 
 
 async def async_setup_services(hass: HomeAssistant) -> None:
@@ -74,26 +71,8 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         schema=SERVICE_SET_DATE_SCHEMA,
     )
 
-    async def handle_stop_stream(call: ServiceCall) -> None:
-        """Handle stop stream service call."""
-        for entry_id, data in hass.data[DOMAIN].items():
-            coordinator = data["coordinator"]
-            success = await coordinator.async_stop_stream()
-            if success:
-                _LOGGER.info("Livestream stopped")
-            else:
-                _LOGGER.warning("No active stream to stop")
-
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_STOP_STREAM,
-        handle_stop_stream,
-        schema=SERVICE_STOP_STREAM_SCHEMA,
-    )
-
 
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Unload services."""
     hass.services.async_remove(DOMAIN, SERVICE_DOWNLOAD_VIDEOS)
     hass.services.async_remove(DOMAIN, SERVICE_SET_DATE)
-    hass.services.async_remove(DOMAIN, SERVICE_STOP_STREAM)
