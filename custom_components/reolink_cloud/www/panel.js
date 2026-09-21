@@ -154,6 +154,7 @@ class ReolinkCloudPanel extends HTMLElement {
           <button id="prev-day">◀ Vorher</button>
           <input type="date" id="date-picker" />
           <button id="next-day">Nächster ▶</button>
+          <button class="refresh-btn" id="download-date">⬇️ Videos laden</button>
           <button class="refresh-btn" id="refresh">🔄 Aktualisieren</button>
         </div>
       </div>
@@ -181,6 +182,7 @@ class ReolinkCloudPanel extends HTMLElement {
       this.loadVideos();
     });
     this.shadowRoot.getElementById('refresh').addEventListener('click', () => this.loadVideos());
+    this.shadowRoot.getElementById('download-date').addEventListener('click', () => this.downloadForDate());
     this.shadowRoot.getElementById('close-modal').addEventListener('click', () => this.closeModal());
     this.shadowRoot.getElementById('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') this.closeModal();
@@ -193,6 +195,28 @@ class ReolinkCloudPanel extends HTMLElement {
     this._currentDate = date.toISOString().split('T')[0];
     this.shadowRoot.getElementById('date-picker').value = this._currentDate;
     this.loadVideos();
+  }
+
+  async downloadForDate() {
+    const button = this.shadowRoot.getElementById('download-date');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Lade...';
+
+    try {
+      const response = await fetch(`/api/reolink_cloud/download/${this._currentDate}`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Download failed');
+
+      await this.loadVideos();
+    } catch (error) {
+      console.error('Error downloading videos:', error);
+      alert(`Fehler beim Laden der Videos für ${this._currentDate}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 
   async loadVideos() {
@@ -211,7 +235,7 @@ class ReolinkCloudPanel extends HTMLElement {
         <div class="empty">
           <div>📁</div>
           <p>Keine Videos für ${this._currentDate} gefunden</p>
-          <p style="font-size: 12px;">Drücke "Download All Today" um Videos herunterzuladen</p>
+          <p style="font-size: 12px;">Drücke "⬇️ Videos laden" um Videos von der Cloud herunterzuladen</p>
         </div>
       `;
     }
@@ -225,7 +249,7 @@ class ReolinkCloudPanel extends HTMLElement {
         <div class="empty">
           <div>📁</div>
           <p>Keine Videos für ${this._currentDate} gefunden</p>
-          <p style="font-size: 12px;">Drücke "Download All Today" um Videos herunterzuladen</p>
+          <p style="font-size: 12px;">Drücke "⬇️ Videos laden" um Videos von der Cloud herunterzuladen</p>
         </div>
       `;
       return;

@@ -11,7 +11,7 @@ A custom integration to access Reolink Cloud videos and thumbnails in Home Assis
 - ✅ Displays the latest thumbnail as a camera entity
 - ✅ Video count per day as sensor
 - ✅ Last video timestamp as sensor
-- ✅ Download buttons for videos
+- ✅ Download buttons for videos (device entities and in the web panel)
 - ✅ Services for downloading by date
 - ✅ Local storage of videos
 

@@ -199,28 +199,33 @@ class ReolinkCloudCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             count=1000,
         )
         
+        date_str = date.strftime("%Y-%m-%d")
+        date_dir = os.path.join(self._storage_path, date_str)
+
         downloaded = []
         for video in videos:
             video_id = video.get("id")
-            if video_id:
+            if not video_id:
+                continue
+
+            video_path = os.path.join(date_dir, f"{video_id}.mp4")
+            if not os.path.exists(video_path):
                 path = await self.async_download_video(video_id, save_permanently=True)
                 if path:
                     downloaded.append(path)
-                    
-                # Also download thumbnail
-                cover_url = video.get("coverUrl")
-                if cover_url:
-                    thumb_data = await self.api.async_download_file(cover_url)
-                    if thumb_data:
-                        date_str = date.strftime("%Y-%m-%d")
-                        thumb_dir = os.path.join(self._storage_path, date_str)
-                        os.makedirs(thumb_dir, exist_ok=True)  # Ensure directory exists
-                        thumb_path = os.path.join(thumb_dir, f"{video_id}.jpg")
-                        
-                        def write_thumb():
-                            with open(thumb_path, "wb") as f:
-                                f.write(thumb_data)
-                        
-                        await self.hass.async_add_executor_job(write_thumb)
-        
+
+            # Also download thumbnail if missing
+            cover_url = video.get("coverUrl")
+            thumb_path = os.path.join(date_dir, f"{video_id}.jpg")
+            if cover_url and not os.path.exists(thumb_path):
+                thumb_data = await self.api.async_download_file(cover_url)
+                if thumb_data:
+                    os.makedirs(date_dir, exist_ok=True)  # Ensure directory exists
+
+                    def write_thumb():
+                        with open(thumb_path, "wb") as f:
+                            f.write(thumb_data)
+
+                    await self.hass.async_add_executor_job(write_thumb)
+
         return downloaded

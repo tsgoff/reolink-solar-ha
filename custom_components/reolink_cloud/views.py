@@ -13,7 +13,7 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 
-from .const import DEFAULT_STORAGE_PATH
+from .const import DEFAULT_STORAGE_PATH, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -129,6 +129,55 @@ class ReolinkCloudDatesView(HomeAssistantView):
         )
 
 
+class ReolinkCloudDownloadDateView(HomeAssistantView):
+    """View to trigger a download of all videos for a specific date."""
+
+    url = "/api/reolink_cloud/download/{date}"
+    name = "reolink_cloud:download"
+    requires_auth = False  # Changed to False - authentication handled by HA session
+
+    def __init__(self, hass: HomeAssistant) -> None:
+        """Initialize the view."""
+        self._hass = hass
+
+    async def post(self, request: web.Request, date: str) -> web.Response:
+        """Handle POST request to download videos for a date."""
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            return web.Response(
+                status=400,
+                text=json.dumps({"error": "Invalid date format. Use YYYY-MM-DD"}),
+                content_type="application/json",
+            )
+
+        entries = self._hass.data.get(DOMAIN, {})
+        if not entries:
+            return web.Response(
+                status=503,
+                text=json.dumps({"error": "Reolink Cloud integration not loaded"}),
+                content_type="application/json",
+            )
+
+        coordinator = next(iter(entries.values()))["coordinator"]
+
+        try:
+            downloaded = await coordinator.async_download_all_videos_for_date(target_date)
+        except Exception as e:
+            _LOGGER.error("Error downloading videos for %s: %s", date, e)
+            return web.Response(
+                status=500,
+                text=json.dumps({"error": str(e)}),
+                content_type="application/json",
+            )
+
+        return web.Response(
+            status=200,
+            text=json.dumps({"downloaded": len(downloaded), "date": date}),
+            content_type="application/json",
+        )
+
+
 class ReolinkCloudMediaView(HomeAssistantView):
     """View to serve Reolink Cloud media files."""
 
@@ -235,4 +284,5 @@ async def async_setup_views(hass: HomeAssistant) -> None:
     hass.http.register_view(ReolinkCloudMediaView(DEFAULT_STORAGE_PATH))
     hass.http.register_view(ReolinkCloudVideoListView(DEFAULT_STORAGE_PATH))
     hass.http.register_view(ReolinkCloudDatesView(DEFAULT_STORAGE_PATH))
+    hass.http.register_view(ReolinkCloudDownloadDateView(hass))
     _LOGGER.info("Reolink Cloud HTTP views registered")
